@@ -1,0 +1,193 @@
+{
+   "version": 8,
+   "metadata": {},
+   "sources": {
+     "myworldmap": {
+       "type": "vector",
+       "tiles": [
+         "http://localhost:8080/data/v3/{z}/{x}/{y}.pbf"
+       ]
+     }
+   },
+   "layers": [
+     {
+       "id": "background",
+       "type": "background",
+       "paint": {
+         "background-color": "rgba(221, 238, 254, 1)"
+       }
+     },
+     {
+       "id": "countries-outline",
+       "type": "line",
+       "source": "myworldmap",
+       "source-layer": "world",
+       "filter": [
+         "all"
+       ],
+       "layout": {
+         "visibility": "visible"
+       },
+       "paint": {
+         "line-width": {
+           "stops": [
+             [
+               3,
+               2
+             ],
+             [
+               8,
+               4
+             ]
+           ]
+         },
+         "line-color": "#54836F"
+       }
+     },
+     {
+       "id": "countries",
+       "type": "fill",
+       "source": "myworldmap",
+       "source-layer": "world",
+       "filter": [
+         "all"
+       ],
+       "paint": {
+         "fill-color": [
+           "match",
+           [
+             "get",
+             "ADMIN"
+           ],
+           "Portugal",
+           "#D3E56F",
+           "Italy",
+           "#D3E56F",
+           "Spain",
+           "#FAE363",
+           "France",
+           "#FFAF6A",
+           "United Kingdom",
+           "#A3CEC5",
+           "Ireland",
+           "#D3E56F",
+           "Belgium",
+           "#ABDB78",
+           "Switzerland",
+           "#A3CEC5",
+           "Germany",
+           "#FDC662",
+           "Luxembourg",
+           "#D3E56F",
+           "Netherlands",
+           "#CDB5CF",
+           "Austria",
+           "#ABDB78",
+           "white"
+         ],
+         "fill-outline-color": {
+            "stops": [
+              [
+                3,
+                "rgba(255, 255, 255, 0)"
+              ],
+              [
+                6,
+                "rgba(255, 255, 255, 0.5)"
+              ]
+            ]
+          },
+         "fill-opacity": 1
+       }
+     },
+     {
+       "id": "hexagons-line-shadow",
+       "type": "line",
+       "source": "myworldmap",
+       "source-layer": "hexagons",
+       "layout": {
+         "visibility": "visible"
+       },
+       "paint": {
+         "line-width": {
+           "stops": [
+             [
+               3,
+               0
+             ],
+             [
+               8,
+               15
+             ]
+           ]
+         },
+         "line-opacity": {
+           "stops": [
+             [
+               3,
+               0
+             ],
+             [
+               8,
+               0.4
+             ]
+           ]
+         },
+         "line-color": "rgba(255, 255, 255, 1)"
+       }
+     },
+     {
+       "id": "hexagons-line",
+       "type": "line",
+       "source": "myworldmap",
+       "source-layer": "hexagons",
+       "filter": [
+         "all"
+       ],
+       "layout": {
+         "visibility": "visible"
+       },
+       "paint": {
+         "line-color": "rgba(103, 103, 103, 1)",
+         "line-width": {
+           "stops": [
+             [
+               3,
+               0
+             ],
+             [
+               8,
+               2
+             ]
+           ]
+         },
+         "line-opacity": 0.8
+       }
+     },
+     {
+       "id": "hexagons",
+       "type": "fill",
+       "source": "myworldmap",
+       "source-layer": "hexagons",
+       "layout": {
+         "visibility": "visible"
+       },
+       "paint": {
+         "fill-color": "rgb(100,100,20)",
+         "fill-opacity": {
+           "stops": [
+             [
+               0,
+               0
+             ],
+             [
+               5,
+               0.1
+             ]
+           ]
+         }
+       }
+     }
+   ],
+   "id": "jwq1cyl7d"
+ }

@@ -1,0 +1,19 @@
+{
+  "options": {
+    "paths": {
+      "root": ".",
+      "styles": ".",
+      "mbtiles": "."
+    }
+  },
+  "styles": {
+    "world": {
+      "style": "style.json"
+    }
+  },
+  "data": {
+    "v3": {
+      "mbtiles": "world.mbtiles"
+    }
+  }
+}
