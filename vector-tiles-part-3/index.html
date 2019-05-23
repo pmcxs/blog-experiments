@@ -37,7 +37,10 @@
             center: [0, 42],
             maxZoom: 5.9,
             minZoom: 3.0,
-            zoom: 4
+            zoom: 4,
+            //maxBounds: [
+            //    [-20, 30],[50, 65]
+            //]
         });
 
         var initialCoordinate = [-9.0252685546875, 38.708074666852596];
@@ -89,15 +92,15 @@
         function setHelicopter(element, isNear) {
             if (isNear) {
 
-                el.style.backgroundImage = 'url(heli.png)';
-                el.style.width = '48px';
-                el.style.height = '48px';
+                el.style.backgroundImage = 'url(heli_1.png)';
+                el.style.width = '64px';
+                el.style.height = '64px';
             }
             else {
 
-                element.style.backgroundImage = 'url(heli-smaller.png)';
-                element.style.width = '18px';
-                element.style.height = '18px';
+                element.style.backgroundImage = 'url(heli_2.png)';
+                element.style.width = '32px';
+                element.style.height = '32px';
             }
         }
 
