@@ -21,7 +21,7 @@ cd ..
 
 cd server
 
-./tippecanoe -o world.mbtiles -zg --drop-densest-as-needed ../data/world.geojson ../data/hexagons.geojson
+./tippecanoe -o world.mbtiles -z6 --drop-densest-as-needed ../data/world.geojson ../data/hexagons.geojson
 
 
 # Run Vector Tile Server
