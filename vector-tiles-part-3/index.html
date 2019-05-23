@@ -35,29 +35,47 @@
             container: 'map',
             style: 'server/style.json',
             center: [0, 42],
-            maxZoom: 5.9,
+            maxZoom: 6.0,
             minZoom: 3.0,
-            zoom: 4,
-            //maxBounds: [
-            //    [-20, 30],[50, 65]
-            //]
+            zoom: 4.5
         });
 
-        var initialCoordinate = [-9.0252685546875, 38.708074666852596];
 
-        var el = document.createElement('div');
-        el.className = 'marker';
-
-        setHelicopter(el, false);
+        var markers = [];
 
         map.on('load', function () {
 
+            addHelicopter(166, 33);
+            addHelicopter(170, 30);
+            addHelicopter(175, 20);
+            addHelicopter(180, 20);
+
+
+            updateHelicoptersVisibility(map.getZoom());
+
+        });
+
+        map.on('zoom', function () {
+
+            updateHelicoptersVisibility(map.getZoom());
+
+        });
+
+        function addHelicopter(u, v) {
+
+            var hexagon = new HexDefinition(500);
+            var centerPoint = hexagon.getCenterPointXY(u, v);
+            var centerCoordinate = hexagon.pixelXYToLatLong(centerPoint.x, centerPoint.y, 10);
+
+            var el = document.createElement('div');
+            el.className = 'marker';
+
             var marker = new mapboxgl.Marker(el)
-                .setLngLat(initialCoordinate)
+                .setLngLat([centerCoordinate.longitude, centerCoordinate.latitude])
                 .setDraggable(true)
                 .addTo(map);
 
-            marker.on('dragend', function (e) {
+             marker.on('dragend', function (e) {
 
                 var coordinate = e.target.getLngLat();
 
@@ -70,38 +88,43 @@
                     var u = features[0].properties["U"];
                     var v = features[0].properties["V"];
 
-                    var hexagon = new HexDefinition(500);
-
                     var centerPoint = hexagon.getCenterPointXY(u, v);
 
                     var centerCoordinate = hexagon.pixelXYToLatLong(centerPoint.x, centerPoint.y, 10);
 
-                    marker.setLngLat([centerCoordinate.longitude, centerCoordinate.latitude]);
+                    e.target.setLngLat([centerCoordinate.longitude, centerCoordinate.latitude]);
                 }
             });
-        });
 
-        map.on('zoom', function () {
-            if (map.getZoom() < 4.7) {
-                setHelicopter(el, false);
-            } else {
-                setHelicopter(el, true);
+            markers.push(marker);
+
+
+        }
+
+        function updateHelicoptersVisibility(zoomLevel) {
+
+            for (var i = 0; i < markers.length; i++) {
+
+                var element = markers[i].getElement();
+
+                if (zoomLevel > 4.7) {
+
+                    element.style.backgroundImage = 'url(heli_1.png)';
+                    element.style.width = '64px';
+                    element.style.height = '64px';
+                }
+                else {
+
+                    element.style.backgroundImage = 'url(heli_2.png)';
+                    element.style.width = '32px';
+                    element.style.height = '32px';
+
+                }
+
             }
-        });
 
-        function setHelicopter(element, isNear) {
-            if (isNear) {
 
-                el.style.backgroundImage = 'url(heli_1.png)';
-                el.style.width = '64px';
-                el.style.height = '64px';
-            }
-            else {
-
-                element.style.backgroundImage = 'url(heli_2.png)';
-                element.style.width = '32px';
-                element.style.height = '32px';
-            }
+            
         }
 
     </script>
