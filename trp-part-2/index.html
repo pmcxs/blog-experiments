@@ -1,0 +1,445 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+    <title>Bing Maps TRP Sample</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+</head>
+<body onload="loadMap()">
+
+<div id='mapDiv' style="position:relative; width:800px; height:600px;"></div>
+
+
+
+<input onclick="run()" type="button" value="START" id="run" style="float: left; width:200px; height:50px; margin-top: 20px"></input>
+
+<div style="float: left; margin-top: 20px; margin-left: 30px"><p id="totalDistance">Total Distance: 0 Km</p></div>
+
+<p id="generation" style="float: left; margin-top: 35px; margin-left: 30px"></p>
+
+<script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+
+<script type="text/javascript" src="js/genetic.js"></script>
+
+<script type="text/javascript">
+
+var MM = Microsoft.Maps;
+
+var _wayPoints = [];
+var _map;
+var _path;
+var _viewchangeCoordinate;
+
+var _isRunning = false;
+
+var _distanceMatrix = {};
+
+function loadMap() {
+
+    _map = new MM.Map(document.getElementById("mapDiv"), {
+        center: new MM.Location(39.0, -8),
+        zoom: 8,
+        credentials:"Ar3o4b8Q6VStAzDIhrvvqPi8MHD0PxmT5YuciLn8psjB6iq7OwyB6UdzLCxpAXPK"});
+
+    MM.Events.addHandler(_map, 'click', addPoint);
+    MM.Events.addHandler(_map, 'viewchangestart', function() { 
+        _viewchangeCoordinate = latLongToPixelXY(_map.getCenter(), _map.getZoom());
+    });
+
+    MM.Events.addHandler(_map, 'viewchangeend', function() { 
+        _viewchangeCoordinate = latLongToPixelXY(_map.getCenter(), _map.getZoom());
+    });
+}
+
+function latLongToPixelXY(location, levelOfDetail) {
+
+    var latitude = location.latitude;
+    var longitude = location.longitude;
+
+    var sinLatitude = Math.sin(latitude * Math.PI / 180);
+    var pixelX = ((longitude + 180) / 360) * 256 * (2 << (levelOfDetail - 1));
+    var pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI)) * 256 * (2 << (levelOfDetail - 1));
+
+    return {
+        x: (0.5 + pixelX) | 0,
+        y: (0.5 + pixelY) | 0};
+}
+
+function pixelDistance( point1, point2 ) {
+  
+    var xs = 0;
+    var ys = 0;
+
+    xs = point2.x - point1.x;
+    xs = xs * xs;
+
+    ys = point2.y - point1.y;
+    ys = ys * ys;
+
+    return Math.sqrt( xs + ys );
+}
+
+
+function addPoint(e) {
+
+    if(_isRunning == true) return;
+
+    var currentCoordinate = latLongToPixelXY(_map.getCenter(), _map.getZoom());
+    var distance = pixelDistance(currentCoordinate, _viewchangeCoordinate);
+
+    if (e.targetType == "map" && distance < 10) {
+ 
+        var point = new MM.Point(e.getX(), e.getY());
+        var location = e.target.tryPixelToLocation(point);
+        
+        var wayPoint = {
+            id: generateUUID(),
+            latitude: location.latitude,
+            longitude: location.longitude
+        };
+
+        _wayPoints.push(wayPoint);
+
+        var pushpin = new MM.Pushpin(location, {icon:"images/waypoint.png", height:30, width:30, anchor:new MM.Point(15,15), draggable: false});
+        pushpin.id = wayPoint.id;
+        _map.entities.push(pushpin);
+        MM.Events.addHandler(pushpin, 'click', removePoint);
+
+        drawPath(_wayPoints);
+    }
+}
+
+function removePoint(e) {
+
+    if(_isRunning == true) return;
+
+    var pushpin = e.target;
+    _map.entities.remove(pushpin);
+
+    var id = pushpin.id;
+
+    for(var i=0; i < _wayPoints.length; i++) {
+
+        if(id == _wayPoints[i].id) {
+            _wayPoints.splice(i, 1);
+            break;
+        }
+    }
+
+    drawPath(_wayPoints);
+}
+
+
+function drawPath(wayPoints) {
+
+    if(_path == undefined) {
+        _path = new Microsoft.Maps.Polyline(wayPoints);
+        _map.entities.push(_path);
+    }
+    else {
+        _path.setLocations(wayPoints);
+    }
+}
+
+function computeTotalDistance(wayPoints) {
+
+    var totalDistance = 0;
+    
+    for(var i=0; i < wayPoints.length -1; i++) {
+
+        totalDistance += distVincenty(wayPoints[i].latitude, wayPoints[i].longitude, wayPoints[i+1].latitude, wayPoints[i+1].longitude);
+    }
+
+    console.log("Total Distance: " + totalDistance);
+
+}
+
+if (typeof(Number.prototype.toRad) === "undefined") {
+    Number.prototype.toRad = function() {
+    return this * Math.PI / 180;
+    }
+}
+
+function distVincenty(lat1, lon1, lat2, lon2) {
+    var a = 6378137,
+        b = 6356752.314245,
+        f = 1 / 298.257223563; // WGS-84 ellipsoid params
+    var L = (lon2 - lon1).toRad();
+    var U1 = Math.atan((1 - f) * Math.tan(lat1.toRad()));
+    var U2 = Math.atan((1 - f) * Math.tan(lat2.toRad()));
+    var sinU1 = Math.sin(U1),
+        cosU1 = Math.cos(U1);
+    var sinU2 = Math.sin(U2),
+        cosU2 = Math.cos(U2);
+    var lambda = L, 
+        lambdaP, 
+        iterLimit = 100;
+    
+    do {
+        var sinLambda = Math.sin(lambda),
+        cosLambda = Math.cos(lambda);
+        var sinSigma = Math.sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda) + (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) * (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
+    
+        if (sinSigma == 0) return 0; // co-incident points
+        var cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
+        var sigma = Math.atan2(sinSigma, cosSigma);
+        var sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+        var cosSqAlpha = 1 - sinAlpha * sinAlpha;
+        var cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha;
+        if (isNaN(cos2SigmaM)) cos2SigmaM = 0; // equatorial line: cosSqAlpha=0 (§6)
+        var C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
+        lambdaP = lambda;
+        lambda = L + (1 - C) * f * sinAlpha * (sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM)));
+    } while (Math.abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
+
+    if (iterLimit == 0) return NaN // formula failed to converge
+    var uSq = cosSqAlpha * (a * a - b * b) / (b * b);
+    var A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
+    var B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
+    var deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) - B / 6 * cos2SigmaM * (-3 + 4 * sinSigma * sinSigma) * (-3 + 4 * cos2SigmaM * cos2SigmaM)));
+    var s = b * A * (sigma - deltaSigma);
+
+    return Math.round(s);
+}
+
+
+function generateUUID(){
+    var d = new Date().getTime();
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (d + Math.random()*16)%16 | 0;
+        d = Math.floor(d/16);
+        return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+    });
+    return uuid;
+}
+
+
+if (typeof(Number.prototype.toRad) === "undefined") {
+  Number.prototype.toRad = function() {
+    return this * Math.PI / 180;
+  }
+}
+
+
+function run() {
+
+    var genetic = Genetic.create();
+
+    
+
+    for(var i=0; i < _wayPoints.length; i++) {
+        
+        _distanceMatrix[_wayPoints[i].id] = {};
+
+        for(var j=0; j < _wayPoints.length; j++) {
+
+            let distance = distVincenty(_wayPoints[i].latitude, _wayPoints[i].longitude, _wayPoints[j].latitude, _wayPoints[j].longitude);
+            _distanceMatrix[_wayPoints[i].id][_wayPoints[j].id] = distance;            
+        }
+    };
+
+    genetic.usedDefault = false; 
+
+    genetic.seed = function() {
+
+        function shuffleArray(array) {
+            for (var i = array.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = array[i];
+                array[i] = array[j];
+                array[j] = temp;
+            }
+            return array;
+        }
+
+        var element = [];
+        element = this.userData.waypoints.slice();
+
+        if(this.usedDefault) {
+            shuffleArray(element);
+            return element;
+        }
+        else {
+            this.usedDefault = true;
+            return element;
+        }
+    };
+
+
+    genetic.mutate = function(entity) {
+       
+        var numberOfSwaps = Math.floor(Math.random()*entity.length/2);
+
+        for(var i=0; i < numberOfSwaps; i++) {
+
+            var len = entity.length;
+            var c1 = Math.floor(Math.random()*len);
+            var c2 = Math.floor(Math.random()*len);
+
+            var waypoint1 = entity[c1];
+            var waypoint2 = entity[c2];
+
+            entity[c1] = waypoint2;
+            entity[c2] = waypoint1;
+        }
+
+        return entity;
+    };
+
+
+    /**
+     *    Parent  A:  1  2  3  4  5  6  7  8  9 
+     *    Parent  B:  9  8  7  6  5  4  3  2  1
+     *
+     *    Segment A:              5  6  7        (random)
+     *    Child   A:  9  8  4  3  5  6  7  2  1
+     *
+     *    Segment B:     8  7                    (random)
+     *    Child   B:  1  8  7  2  3  4  5  6  9
+     *
+     */
+    genetic.crossover = function(parentA, parentB) {
+        
+
+        function getSegment(parent) {
+
+            var len = parent.length;
+            var c1 = Math.floor(Math.random()*len);
+            var c2 = Math.floor(Math.random()*len);     
+            if (c1 > c2) {
+                var tmp = c2;
+                c2 = c1;
+                c1 = tmp;
+            }
+
+            var elements = parent.slice(c1,c2+1);
+
+            return {
+                startIndex: c1,
+                endIndex: c2,
+                elements: elements
+            };
+        }
+
+
+        function containsElement(segment, element) {
+
+            for(var i=0; i < segment.length; i++) {
+
+                if(element.id == segment[i].id) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+        //get random segment from each parent
+        var segmentA = getSegment(parentA);
+        var segmentB = getSegment(parentB);
+
+        //create childs
+        var childA = [];
+        var childB = [];
+
+        var size = parentA.length;
+
+        //add segment from ParentA directly to childA
+        for(var i=0; i < segmentA.elements.length; i++) {
+            childA[i + segmentA.startIndex] = segmentA.elements[i];
+        }
+
+        //add segment from ParentB directly to childB
+        for(var i=0; i < segmentB.elements.length; i++) {
+            childB[i + segmentB.startIndex] = segmentB.elements[i];
+        }
+
+        //add the elements from ParentB that don't exist on the segmentA in existing order
+        var parentBIndex = 0;
+
+        for(var i=0; i < size; i++) {
+            if(childA[i] == undefined) {
+                while(containsElement(segmentA.elements, parentB[parentBIndex])) parentBIndex++;
+                childA[i] = parentB[parentBIndex++];
+            }
+        }   
+
+        //add the elements from ParentA that don't exist on the segmentB in existing order
+        var parentAIndex = 0;
+
+        for(var i=0; i < size; i++) {
+            if(childB[i] == undefined) {
+                while(containsElement(segmentB.elements, parentA[parentAIndex])) parentAIndex++;
+                childB[i] = parentA[parentAIndex++];
+            }
+        }       
+        
+        return [childA, childB];
+    };
+
+    genetic.fitness = function(entity) {
+
+        var totalDistance = 0;
+    
+        for(var i=0; i < entity.length -1; i++) {
+            totalDistance += this.userData.distanceMatrix[entity[i].id][entity[i+1].id];
+        }
+        
+        return totalDistance;
+    };
+
+
+    genetic.generation = function(pop, generation, stats) {
+        return true;
+    };
+
+    genetic.notification = function(pop, generation, stats, isFinished) {
+        
+        document.getElementById('totalDistance').innerHTML  = "Total Distance: " + pop[0].fitness + " Kms ";
+
+        document.getElementById('generation').innerHTML = "(" + generation + " of " + maxIterations + ")";
+
+        _wayPoints = pop[0].entity;
+
+        drawPath(_wayPoints);
+    
+        if(isFinished) {
+            document.getElementById('run').disabled = false;
+            document.getElementById('generation').innerHTML = "";
+            _isRunning = false;
+        }
+    };
+
+    var maxIterations = 400;
+
+    var config = {
+        iterations: maxIterations,
+        size: 250,
+        skip: 10,
+        fittestAlwaysSurvives: true,
+        mutation: 0.7,
+        crossover: 0.7
+    };
+
+    var userData = {
+        waypoints: _wayPoints,
+        distanceMatrix: _distanceMatrix
+    };
+
+
+    genetic.optimize = Genetic.Optimize.Minimize;
+    genetic.select1 = Genetic.Select1.Tournament2;
+    genetic.select2 = Genetic.Select2.Tournament2;
+
+    genetic.evolve(config, userData);
+    document.getElementById('run').disabled = true;
+    _isRunning = true;
+
+}
+
+
+
+</script>
+</body>
+</html>
